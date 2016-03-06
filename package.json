@@ -1,0 +1,15 @@
+{
+  "private": true,
+  "dependencies": {
+    "chai": "^3.3.0",
+    "jscs": "^2.2.1",
+    "mocha": "^2.3.3"
+  },
+  "scripts": {
+    "test": "mocha test",
+    "lint": "jscs ."
+  },
+  "devDependencies": {
+    "chai": "^3.5.0"
+  }
+}
