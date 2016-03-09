@@ -10,6 +10,7 @@
     "lint": "jscs ."
   },
   "devDependencies": {
-    "chai": "^3.5.0"
+    "chai": "^3.5.0",
+    "mock-fs": "^3.8.0"
   }
 }
