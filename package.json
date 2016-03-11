@@ -11,6 +11,9 @@
   },
   "devDependencies": {
     "chai": "^3.5.0",
-    "mock-fs": "^3.8.0"
+    "lolex": "^1.4.0",
+    "mock-fs": "^3.8.0",
+    "sinon": "^1.17.3",
+    "sleep-ms": "^2.0.0"
   }
 }
