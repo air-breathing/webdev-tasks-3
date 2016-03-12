@@ -7,7 +7,6 @@ var should = require('chai').should();
 var mock = require('mock-fs');
 var flow = require('../lib/flow');
 var sinon = require('sinon');
-var sleep = require('sleep-ms');
 
 describe('Flow library', function () {
     describe('makeAsync function', function () {
@@ -235,10 +234,10 @@ describe('Flow library', function () {
     });
 
     describe('parallel limit function', function () {
-        it ('should be parallel', function (done) {
+        it('should be parallel', function (done) {
             flow.parallel(
-                [flow.makeAsync(function () {return 'data1'}, 5),
-                 flow.makeAsync(function () {return 'data2'}, 1),
+                [flow.makeAsync(function () {return 'data1'}, 10),
+                 flow.makeAsync(function () {return 'data2'}, 5),
                  flow.makeAsync(function () {return 'data3'})],
                 2,
                 function (error, data) {
@@ -372,5 +371,4 @@ describe('Flow library', function () {
             )
         })
     });
-
 });
