@@ -60,7 +60,6 @@ flow.serial([
 
     // Прочитанное содержимое файлов
     var contents = data[1];
-    console.log(contents);
     contents = contents
         // Исключаем пустые файлы
         .filter(function (content, index) {

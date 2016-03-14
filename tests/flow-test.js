@@ -9,9 +9,13 @@ var flow = require('../lib/flow');
 var sinon = require('sinon');
 
 describe('Flow library', function () {
+    var clocks = [];
+
     describe('makeAsync function', function () {
         it('should give right result', function (done) {
-            var asyncFunction = flow.makeAsync(function(a) {return a.a + a.b});
+            var asyncFunction = flow.makeAsync(
+                function(a) {return a.a + a.b; }
+            );
             asyncFunction({a: 1, b: 1}, function (error, data) {
                 data.should.be.equal(2);
                 done();
@@ -28,8 +32,9 @@ describe('Flow library', function () {
             x--;
         });
 
-        it('should withstand a timeout', function (done) {
+        it('should withstand a timeout', function () {
             var clock = sinon.useFakeTimers();
+            clocks.push(clock);
             var waited_data = undefined;
             var asyncFunction = flow.makeAsync(function(a) {return a + 'async'}, 10);
             asyncFunction('data', function (error, data) {
@@ -40,7 +45,7 @@ describe('Flow library', function () {
             should.not.exist(waited_data);
             clock.tick(5);
             should.exist(waited_data);
-            done();
+            //done();
         });
 
         it('should correct work even data are missing', function (done) {
@@ -55,7 +60,7 @@ describe('Flow library', function () {
             var spy = sinon.spy(function() {return 'asynchronous'});
             var asyncFunction = flow.makeAsync(spy);
             asyncFunction(function () {
-                spy.calledOnce.should.be.true;
+                sinon.assert.calledOnce(spy);
                 done();
             })
         });
@@ -91,12 +96,12 @@ describe('Flow library', function () {
                 })
         });
 
-
-        it('exception will be in final callback', function (done) {
-            flow.serial([flow.makeAsync(function() {throw 'Muha-muha1'}, 10),
-                    flow.makeAsync(function() {return 'data'}, 10)],
+        it('exception will be in final callback and next function was not called', function (done) {
+            var spy = sinon.spy(flow.makeAsync(function() {return 'data'}));
+            flow.serial([flow.makeAsync(function() {throw 'Muha-muha1'}, 10), spy],
                 function (error) {
                     error.should.be.equal('Muha-muha1');
+                    spy.callCount.should.be.equal(0);
                     done();
                 })
         });
@@ -116,8 +121,7 @@ describe('Flow library', function () {
             flow.serial([flow.makeAsync(spy, 10),
                          flow.makeAsync(spy2, 5)],
                 function (error, data) {
-                    spy.calledOnce.should.be.true;
-                    //console.log(spy2.calledOnce);
+                    sinon.assert.calledOnce(spy);
                     done();
                 })
 
@@ -129,7 +133,7 @@ describe('Flow library', function () {
             flow.map(['a', 'b', 'c'],
                 flow.makeAsync(function(data) {return data + 'q';}),
                 function(error, result) {
-                    result.should.to.have.members(['aq', 'cq', 'bq']);
+                    result.should.to.deep.equal(['aq', 'bq', 'cq']);
                     done();
             })
         });
@@ -151,9 +155,9 @@ describe('Flow library', function () {
             flow.map(['a', 'b', 'c'],
                 spy,
                 function() {
-                    spy.withArgs('a').calledOnce.should.be.true;
-                    spy.withArgs('b').calledOnce.should.be.true;
-                    spy.withArgs('c').calledOnce.should.be.true;
+                    sinon.assert.calledOnce(spy.withArgs('b'));
+                    sinon.assert.calledOnce(spy.withArgs('a'));
+                    sinon.assert.calledOnce(spy.withArgs('c'));
                     done();
                 })
         });
@@ -187,17 +191,16 @@ describe('Flow library', function () {
             );
         });
 
-        it('should write data in different order', function (done) {
+        it('should save order', function (done) {
             flow.parallel(
                 [flow.makeAsync(function() {return 'data1'}, 10),
-                flow.makeAsync(function() {return 'data2'}, 3)],
+                    flow.makeAsync(function() {return 'data2'}, 3)],
                 function (error, data) {
-                    data.should.to.deep.equal(['data2', 'data1']);
+                    data.should.to.deep.equal(['data1', 'data2']);
                     done();
                 }
             );
         });
-
 
         it('should handle exceptions', function (done) {
             flow.parallel(
@@ -213,35 +216,24 @@ describe('Flow library', function () {
         it('should handle exceptions without delay', function (done) {
             flow.parallel(
                 [flow.makeAsync(function() {throw 'error1'}, 10),
-                    flow.makeAsync(function() {throw 'error2'}, 3)],
+                 flow.makeAsync(function() {throw 'error2'}, 3)],
                 function (error) {
                     error.should.be.equal('error2');
                     done();
                 }
             );
         });
-
-        it('should return data from all functions', function (done) {
-            flow.parallel(
-                [flow.makeAsync(function () {return '1case'}, 2),
-                    flow.makeAsync(function () {return '2case'}),
-                    flow.makeAsync(function () {return '3case'}, 5)],
-                function (error, data){
-                    done();
-                })
-        })
-
     });
 
     describe('parallel limit function', function () {
-        it('should be parallel', function (done) {
+        it('should return data in order of functions', function (done) {
             flow.parallel(
                 [flow.makeAsync(function () {return 'data1'}, 10),
                  flow.makeAsync(function () {return 'data2'}, 5),
                  flow.makeAsync(function () {return 'data3'})],
                 2,
                 function (error, data) {
-                    data.should.to.deep.equal(['data2', 'data3', 'data1']);
+                    data.should.to.deep.equal(['data1', 'data2', 'data3']);
                     done();
                 }
             )
@@ -249,29 +241,25 @@ describe('Flow library', function () {
 
         it('should once invoke all functions', function (done) {
             var spy = sinon.spy(function (data) { return data; });
-            spy.withArgs('1case');
             var spy2 = sinon.spy(function (data) { return data; });
-            spy2.withArgs('2case');
             var spy3 = sinon.spy(function (data) { return data; });
-            spy3.withArgs('3case');
             var asyncSpy = flow.makeAsync(spy, 2);
             var asyncSpy2 = flow.makeAsync(spy2, 3);
             var asyncSpy3 = flow.makeAsync(spy3, 1);
             flow.parallel([asyncSpy, asyncSpy2, asyncSpy3],2,function () {
-                spy.calledOnce.should.be.true;
-                spy2.calledOnce.should.be.true;
-                spy3.calledOnce.should.be.true;
+                sinon.assert.calledOnce(spy);
+                sinon.assert.calledOnce(spy2);
+                sinon.assert.calledOnce(spy3);
                 done();
             })
 
         });
 
-
         it('should return data from all functions', function (done) {
             flow.parallel(
                 [flow.makeAsync(function () {return '1case'}, 2),
-                    flow.makeAsync(function () {return '2case'}),
-                    flow.makeAsync(function () {return '3case'}, 5)],
+                 flow.makeAsync(function () {return '2case'}),
+                 flow.makeAsync(function () {return '3case'}, 5)],
                 2,
                 function (error, data){
                     data.should.to.have.members(['1case', '2case', '3case']);
@@ -286,45 +274,43 @@ describe('Flow library', function () {
             var asyncSpy2 = flow.makeAsync(spy, 2);
             var asyncSpy3 = flow.makeAsync(spy, 2);
             var clock = sinon.useFakeTimers();
+            clocks.push(clock);
             flow.parallel(
                 [asyncSpy, asyncSpy1, asyncSpy2, asyncSpy3],
                 1,
-                function (error, data) {
-                    //console.log(data);
-                    //
-                    //done();
-                }
+                function (error, data) {}
             );
             clock.tick(3);
-            spy.calledOnce.should.be.true;
+            spy.callCount.should.be.equal(1);
             clock.tick(3);
-            spy.calledTwice.should.be.true;
+            spy.callCount.should.be.equal(2);
             clock.tick(2);
-            spy.calledThrice.should.be.true;
+            spy.callCount.should.be.equal(3);
             clock.restore();
             done();
         });
 
 
         it('should invoke only limit function in the moment 2', function (done) {
-            var spy = sinon.spy(function () {return 'data1'});
+            var spy = sinon.spy(function () {return 'data1'; });
             var asyncSpy = flow.makeAsync(spy, 3);
-            var asyncSpy1 = flow.makeAsync(spy, 3);
-            var asyncSpy2 = flow.makeAsync(spy, 3);
-            var asyncSpy3 = flow.makeAsync(spy, 3);
+            var asyncSpy1 = flow.makeAsync(spy);
+            var asyncSpy2 = flow.makeAsync(spy, 5);
+            var asyncSpy3 = flow.makeAsync(spy, 10);
             var clock = sinon.useFakeTimers();
+            clocks.push(clock);
             flow.parallel(
                 [asyncSpy, asyncSpy1, asyncSpy2, asyncSpy3],
                 2,
-                function (error, data) {
-                    //console.log(data);
-                    //
-                    //done();
-                }
+                function (error, data) {}
             );
+            clock.tick(1);
+            spy.callCount.should.be.equal(1);
             clock.tick(3);
-            spy.calledTwice.should.be.true;
-            clock.tick(3);
+            spy.callCount.should.be.equal(2);
+            clock.tick(4);
+            spy.callCount.should.be.equal(3);
+            clock.tick(10);
             spy.callCount.should.be.equal(4);
             clock.restore();
             done();
@@ -345,30 +331,49 @@ describe('Flow library', function () {
 
         it('should catch any first exception', function (done) {
             flow.parallel(
-                [flow.makeAsync(function () { throw 'error1';}),
-                    flow.makeAsync(function () { throw 'error2';}),
-                    flow.makeAsync(function () { throw 'error3';})],
+                [flow.makeAsync(function () { throw 'error1';}, 0),
+                 flow.makeAsync(function () { throw 'error2';}, 1),
+                 flow.makeAsync(function () { throw 'error3';}, 2)],
                 3,
                 function (error) {
-                    error.should.to.be.oneOf(['error1', 'error2', 'error3']);
+                    error.should.be.equal('error1');
                     done();
                 }
             )
-        })
+        });
+
+        it('should catch any first exception 2', function (done) {
+            flow.parallel(
+                [flow.makeAsync(function () { throw 'error1';}, 3),
+                 flow.makeAsync(function () { throw 'error2';}, 1),
+                 flow.makeAsync(function () { throw 'error3';}, 2)],
+                3,
+                function (error) {
+                    error.should.be.equal('error2');
+                    done();
+                }
+            )
+        });
 
         it('should invoke callback once', function (done) {
-            var spy = sinon.spy(function (error)
-            {
-                spy.calledOnce.should.to.be.true;
+            var spy = sinon.spy(function (error) {
+                spy.callCount.should.be.equal(1);
                 done();
             });
             flow.parallel(
                 [flow.makeAsync(function () { return 'data1';}),
-                flow.makeAsync(function () { return 'data2';}),
-                flow.makeAsync(function () { return 'data3';})],
+                 flow.makeAsync(function () { return 'data2';}),
+                 flow.makeAsync(function () { return 'data3';})],
                 3,
                 spy
-            )
-        })
+            );
+        });
+    });
+
+    after(function (done) {
+        clocks.forEach(function(elem) {
+            elem.restore();
+        });
+        done();
     });
 });
