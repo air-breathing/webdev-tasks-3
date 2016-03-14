@@ -202,17 +202,6 @@ describe('Flow library', function () {
             );
         });
 
-        it('should handle exceptions', function (done) {
-            flow.parallel(
-                [flow.makeAsync(function() {throw 'error1'}),
-                 flow.makeAsync(function() {throw 'error2'})],
-                function (error) {
-                    error.should.to.be.oneOf(['error1', 'error2']);
-                    done();
-                }
-            );
-        });
-
         it('should handle exceptions without delay', function (done) {
             flow.parallel(
                 [flow.makeAsync(function() {throw 'error1'}, 10),
