@@ -10,7 +10,10 @@ var sinon = require('sinon');
 
 describe('Flow library', function () {
     var clocks = [];
-
+    /*beforeEach( function (done) {
+        this.clock = sinon.useFakeTimers();
+        done();
+    });*/
     describe('makeAsync function', function () {
         it('should give right result', function (done) {
             var asyncFunction = flow.makeAsync(
@@ -36,7 +39,7 @@ describe('Flow library', function () {
             var clock = sinon.useFakeTimers();
             clocks.push(clock);
             var waited_data = undefined;
-            var asyncFunction = flow.makeAsync(function(a) {return a + 'async'}, 10);
+            var asyncFunction = flow.makeAsync(function(a) {return a + 'async';}, 10);
             asyncFunction('data', function (error, data) {
                 waited_data = data;
                 clock.restore();
@@ -49,7 +52,7 @@ describe('Flow library', function () {
         });
 
         it('should correct work even data are missing', function (done) {
-            var asyncFunction = flow.makeAsync(function() {return 'asynchronous'});
+            var asyncFunction = flow.makeAsync(function() {return 'asynchronous';});
             asyncFunction(function (error, data) {
                 data.should.be.a.equal('asynchronous');
                 done();
@@ -79,7 +82,7 @@ describe('Flow library', function () {
     describe('serial function', function () {
         it('should from first send data to second', function (done) {
             flow.serial([flow.makeAsync(function() {return 'first'}, 10),
-                         flow.makeAsync(function(data) {return [data, 'second']}, 10)],
+                         flow.makeAsync(function(data) {return [data, 'second'];}, 10)],
                 function (error, data) {
                     data[0].should.a.equal('first');
                     data[1].should.a.equal('second');
@@ -88,8 +91,8 @@ describe('Flow library', function () {
         });
 
         it('should throw first exception', function (done) {
-            flow.serial([flow.makeAsync(function() {throw 'Muha-muha1'}, 10),
-                         flow.makeAsync(function() {throw 'Muha-muha2'}, 10)],
+            flow.serial([flow.makeAsync(function() {throw 'Muha-muha1';}, 10),
+                         flow.makeAsync(function() {throw 'Muha-muha2';}, 10)],
                 function (error) {
                     error.should.be.equal('Muha-muha1');
                     done();
@@ -97,7 +100,7 @@ describe('Flow library', function () {
         });
 
         it('exception will be in final callback and next function was not called', function (done) {
-            var spy = sinon.spy(flow.makeAsync(function() {return 'data'}));
+            var spy = sinon.spy(flow.makeAsync(function() {return 'data';}));
             flow.serial([flow.makeAsync(function() {throw 'Muha-muha1'}, 10), spy],
                 function (error) {
                     error.should.be.equal('Muha-muha1');
@@ -107,8 +110,8 @@ describe('Flow library', function () {
         });
 
         it('should be performed consistently', function (done) {
-            flow.serial([flow.makeAsync(function() {return 'data1'}, 10),
-                         flow.makeAsync(function() {return 'data2'}, 5)],
+            flow.serial([flow.makeAsync(function() {return 'data1';}, 10),
+                         flow.makeAsync(function() {return 'data2';}, 5)],
                 function (error, data) {
                     data.should.be.equal('data2');
                     done();
@@ -182,8 +185,8 @@ describe('Flow library', function () {
     describe('parallel function', function () {
         it('should write data in one order', function (done) {
             flow.parallel(
-                [flow.makeAsync(function() {return 'data1'}, 3),
-                 flow.makeAsync(function() {return 'data2'}, 10)],
+                [flow.makeAsync(function() {return 'data1';}, 3),
+                 flow.makeAsync(function() {return 'data2';}, 10)],
                 function (error, data) {
                     data.should.to.deep.equal(['data1', 'data2']);
                     done();
@@ -193,8 +196,8 @@ describe('Flow library', function () {
 
         it('should save order', function (done) {
             flow.parallel(
-                [flow.makeAsync(function() {return 'data1'}, 10),
-                    flow.makeAsync(function() {return 'data2'}, 3)],
+                [flow.makeAsync(function() {return 'data1';}, 10),
+                 flow.makeAsync(function() {return 'data2';}, 3)],
                 function (error, data) {
                     data.should.to.deep.equal(['data1', 'data2']);
                     done();
@@ -204,8 +207,8 @@ describe('Flow library', function () {
 
         it('should handle exceptions without delay', function (done) {
             flow.parallel(
-                [flow.makeAsync(function() {throw 'error1'}, 10),
-                 flow.makeAsync(function() {throw 'error2'}, 3)],
+                [flow.makeAsync(function() {throw 'error1';}, 10),
+                 flow.makeAsync(function() {throw 'error2';}, 3)],
                 function (error) {
                     error.should.be.equal('error2');
                     done();
@@ -217,9 +220,9 @@ describe('Flow library', function () {
     describe('parallel limit function', function () {
         it('should return data in order of functions', function (done) {
             flow.parallel(
-                [flow.makeAsync(function () {return 'data1'}, 10),
-                 flow.makeAsync(function () {return 'data2'}, 5),
-                 flow.makeAsync(function () {return 'data3'})],
+                [flow.makeAsync(function () {return 'data1';}, 10),
+                 flow.makeAsync(function () {return 'data2';}, 5),
+                 flow.makeAsync(function () {return 'data3';})],
                 2,
                 function (error, data) {
                     data.should.to.deep.equal(['data1', 'data2', 'data3']);
@@ -246,9 +249,9 @@ describe('Flow library', function () {
 
         it('should return data from all functions', function (done) {
             flow.parallel(
-                [flow.makeAsync(function () {return '1case'}, 2),
-                 flow.makeAsync(function () {return '2case'}),
-                 flow.makeAsync(function () {return '3case'}, 5)],
+                [flow.makeAsync(function () {return '1case';}, 2),
+                 flow.makeAsync(function () {return '2case';}),
+                 flow.makeAsync(function () {return '3case';}, 5)],
                 2,
                 function (error, data){
                     data.should.to.have.members(['1case', '2case', '3case']);
@@ -257,7 +260,7 @@ describe('Flow library', function () {
         });
 
         it('should invoke only limit function in one moment', function (done) {
-            var spy = sinon.spy(function () {return 'data1'});
+            var spy = sinon.spy(function () {return 'data1';});
             var asyncSpy = flow.makeAsync(spy, 3);
             var asyncSpy1 = flow.makeAsync(spy, 3);
             var asyncSpy2 = flow.makeAsync(spy, 2);
@@ -301,7 +304,6 @@ describe('Flow library', function () {
             spy.callCount.should.be.equal(3);
             clock.tick(10);
             spy.callCount.should.be.equal(4);
-            clock.restore();
             done();
         });
 
@@ -359,8 +361,8 @@ describe('Flow library', function () {
         });
     });
 
-    after(function (done) {
-        clocks.forEach(function(elem) {
+    afterEach(function (done) {
+        clocks.forEach(function (elem) {
             elem.restore();
         });
         done();
