@@ -8,14 +8,20 @@ var mock = require('mock-fs');
 var flow = require('../lib/flow');
 var sinon = require('sinon');
 
-describe('Flow library', function () {
+describe('Flow library', () => {
     var clocks = [];
-    /*beforeEach( function (done) {
-        this.clock = sinon.useFakeTimers();
-        done();
-    });*/
-    describe('makeAsync function', function () {
-        it('should give right result', function (done) {
+
+    describe('makeAsync function', () => {
+        //var clock;
+        /*beforeEach(() => {
+            this.clock = sinon.sandbox.useFakeTimers();
+        });
+
+        afterEach(() => {
+            this.clock.restore();
+        });*/
+
+        it('should give right result', (done) => {
             var asyncFunction = flow.makeAsync(
                 function(a) {return a.a + a.b; }
             );
@@ -25,7 +31,7 @@ describe('Flow library', function () {
             })
         });
 
-        it('should be asynchronous', function (done) {
+        it('should be asynchronous', (done) => {
             var x = 1;
             var asyncFunction = flow.makeAsync(function() {
                 x.should.be.equal(0);
@@ -35,7 +41,7 @@ describe('Flow library', function () {
             x--;
         });
 
-        it('should withstand a timeout', function () {
+        it('should withstand a timeout', () => {
             var clock = sinon.useFakeTimers();
             clocks.push(clock);
             var waited_data = undefined;
@@ -51,7 +57,7 @@ describe('Flow library', function () {
             //done();
         });
 
-        it('should correct work even data are missing', function (done) {
+        it('should correct work even data are missing', (done) => {
             var asyncFunction = flow.makeAsync(function() {return 'asynchronous';});
             asyncFunction(function (error, data) {
                 data.should.be.a.equal('asynchronous');
@@ -59,7 +65,7 @@ describe('Flow library', function () {
             })
         });
 
-        it('should invoke callback once', function (done) {
+        it('should invoke callback once', (done) => {
             var spy = sinon.spy(function() {return 'asynchronous'});
             var asyncFunction = flow.makeAsync(spy);
             asyncFunction(function () {
@@ -68,7 +74,7 @@ describe('Flow library', function () {
             })
         });
 
-        it('should correct handle errors', function (done) {
+        it('should correct handle errors', (done) => {
             var asyncFunction = flow.makeAsync(function() {
                 throw 'My error';
             });
@@ -77,6 +83,7 @@ describe('Flow library', function () {
                 done();
             })
         });
+
     });
 
     describe('serial function', function () {
@@ -95,6 +102,16 @@ describe('Flow library', function () {
                          flow.makeAsync(function() {throw 'Muha-muha2';}, 10)],
                 function (error) {
                     error.should.be.equal('Muha-muha1');
+                    done();
+                })
+        });
+
+        it('should not invoke callback after exception', function (done) {
+            var spy = sinon.spy();
+            flow.serial([flow.makeAsync(function() {throw 'Muha-muha1';}),
+                         flow.makeAsync(spy, 5)],
+                function () {
+                    spy.callCount.should.be.equal(0);
                     done();
                 })
         });
@@ -141,25 +158,26 @@ describe('Flow library', function () {
             })
         });
 
-        it('should throw any exception', function () {
+        it('should throw any exception', function (done) {
             flow.map(['a', 'b', 'c'],
                 flow.makeAsync(function(data) {throw 'exception ' + data;}),
                 function(error) {
-                    error.should.to.be.oneOf('exception a', 'exception b', 'exception c');
+                    error.should.to.be.oneOf(['exception a', 'exception b', 'exception c']);
                     done();
                 })
         });
 
-        it('should invoke function once on one value in array', function () {
+        it('should invoke function once on one value in array', function (done) {
             var spy = sinon.spy();
             spy.withArgs('a');
             spy.withArgs('b');
             spy.withArgs('c');
             flow.map(['a', 'b', 'c'],
-                spy,
+                flow.makeAsync(spy),
                 function() {
-                    sinon.assert.calledOnce(spy.withArgs('b'));
+                    spy.callCount.should.be.equal(3);
                     sinon.assert.calledOnce(spy.withArgs('a'));
+                    sinon.assert.calledOnce(spy.withArgs('b'));
                     sinon.assert.calledOnce(spy.withArgs('c'));
                     done();
                 })
